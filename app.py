@@ -1,29 +1,16 @@
-"""
-This script is seperate from the entire client-end project
-and is not intended for the client to use this script.
-"""
-
 import contextlib
 import json
-import threading
 import time
-from datetime import datetime
 import os
-import pathlib
-import io
-import zipfile
 
-import requests
-from flask import Flask, render_template, send_from_directory
-from forex_python.converter import CurrencyRates
+from flask import Flask, Response, render_template, send_from_directory
 
 app = Flask(__name__)
 
-currency_rates = CurrencyRates()
 last_exchange_rate = 1.3608673726676752
 
 def write_log(log: str) -> None:
-    with open(f"{os.path.dirname(os.path.realpath(__file__))}/log.txt", 'a') as f:
+    with open(f"{os.path.dirname(os.path.realpath(__file__))}/log.txt", 'a', encoding="utf-8") as f:
         f.write(log +'\n')
 
 
@@ -39,9 +26,16 @@ def download():
 
 @app.route('/version')
 def version():
-    with open(f"{os.path.dirname(os.path.realpath(__file__))}/static/version.txt", "r") as f:
-        version = f.read()
-    return version
+    with open(f"{os.path.dirname(os.path.realpath(__file__))}/static/version.txt", "r", encoding="utf-8") as f:
+        version_code = f.read()
+    return Response(version_code, mimetype='text/plain')
+
+
+@app.route('/update_message')
+def update_message():
+    with open(f"{os.path.dirname(os.path.realpath(__file__))}/static/update_message.txt", "r", encoding="utf-8") as f:
+        message = f.read()
+    return Response(message, mimetype='text/plain')
 
 
 @app.route("/")
@@ -63,7 +57,7 @@ def index() -> None:
 
 
 def get_price_of_steel() -> dict:
-    with open(f"{os.path.dirname(os.path.realpath(__file__))}/inventory - Price of Steel.json", "r") as f:
+    with open(f"{os.path.dirname(os.path.realpath(__file__))}/inventory - Price of Steel.json", "r", encoding="utf-8") as f:
         data = json.load(f)
     return data["Price Per Pound"]
 
@@ -135,7 +129,7 @@ def get_all_part_numbers() -> list[str]:
 
 def get_inventory_data() -> dict:
     try:
-        with open(f"{os.path.dirname(os.path.realpath(__file__))}/inventory.json", "r") as inventory_file:
+        with open(f"{os.path.dirname(os.path.realpath(__file__))}/inventory.json", "r", encoding="utf-8") as inventory_file:
             data = json.load(inventory_file)
         return data
     except Exception as e:
@@ -144,23 +138,9 @@ def get_inventory_data() -> dict:
 
 def get_parts_in_inventory_data() -> dict:
     try:
-        with open(f"{os.path.dirname(os.path.realpath(__file__))}/inventory - Parts in Inventory.json", "r") as inventory_file:
+        with open(f"{os.path.dirname(os.path.realpath(__file__))}/inventory - Parts in Inventory.json", "r", encoding="utf-8") as inventory_file:
             data = json.load(inventory_file)
         return data
     except Exception as e:
         write_log(f'Failed to load inventory.json - {e}')
         return {}
-
-
-def exhange_rate():
-    global last_exchange_rate
-    while True:
-        try:
-            last_exchange_rate = currency_rates.get_rate("USD", "CAD")
-        except Exception:
-            last_exchange_rate = 1.3608673726676752  # just a guess
-        time.sleep(15)
-
-#thread = threading.Thread(target=exhange_rate, args=())
-#thread.start()
-# app.run(host="10.0.0.217", port=5000, debug=False, threaded=True)
